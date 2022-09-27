@@ -6,13 +6,16 @@ from xml.dom.minidom import parseString
 import numpy as np
 import sys
 import json
-import dicttoxml
+# import dicttoxml
 import random
 # import const
 import mmap
 import time
 from TrafficModelInterface import *
-sys.path.append('D:\Panosim5\V22_5\PanoSimDatabase\Plugin\Disturbance')
+import os
+#获取文件父目录
+V2X_MAP_Dir = os.path.dirname(__file__)
+print('V2X_MAP_Dir',V2X_MAP_Dir,os.path.join(os.path.expanduser('~'),"Desktop"))
 import MAP
 
 def getMAPData():#需要新的地图数据API
@@ -22,7 +25,7 @@ def getMAPData():#需要新的地图数据API
 
         junctions = getJunctionList()
         Nodes=[]
-        # print('////',len(junctions))
+        print('////',len(junctions),junctions)
         for junction in junctions:
             # print(len(junction))
             if len(junction)<=6:#剔除internal junction(内部junction都比较长？TOTEST)
@@ -34,13 +37,13 @@ def getMAPData():#需要新的地图数据API
             # print('-----------------------------------')
             # print(lanes)
             # print('-----------------------------------')
-            
+        print('Nodes',Nodes)      
         MAPData['nodes']=[]
         for node in Nodes:
             print('111111',node,type(node))
             MapNode=MAP.MapNode_DF()
             MapNode['name']= node
-            MapNode['id']['id']=0
+            MapNode['id']['id']=int(node[-1])  #0
             MapNode['refPos']={}
             #refPos
             node_shape = getJunctionShape(node)
@@ -51,8 +54,8 @@ def getMAPData():#需要新的地图数据API
                 total_y = total_y+item[1]
             avg_x = total_x/len(node_shape)
             avg_y = total_y/len(node_shape)
-            lat = (avg_y) * 180.0 / (math.pi * earth_radius) + 37.788204
-            longi = ((avg_x) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+            lat = (avg_y) * 180.0 / (math.pi * earth_radius) + 39.5427
+            longi = ((avg_x) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
             MapNode['refPos']['lat']=int(10000000 * lat)
             MapNode['refPos']['long']=int(10000000 * longi)
             MapNode['refPos']['elevation']=0
@@ -75,7 +78,7 @@ def getMAPData():#需要新的地图数据API
                 edge_num = int(len(lanes)/4)
                 for i in range(4):
                     if lanes[i*edge_num].startswith('-'):                    
-                        edge_name = lanes[i*edge_num][0:7]
+                        edge_name = lanes[i*edge_num][0:8]
                     else:
                         edge_name = lanes[i*edge_num][0:6]
                     edge_names.append(edge_name)
@@ -107,13 +110,13 @@ def getMAPData():#需要新的地图数据API
                     edge_Movements.append(remotejunctions)
                         
             elif isDeadEnd(lanes[0]):  #判断是否有lane为死路
-                if lanes[0].startswith('-'):                    
+                if lanes[0].startswith('-'):                 
                     edge_name = lanes[0][0:7]
                 else:
                     edge_name = lanes[0][0:6]  
                 edge_names.append(edge_name)
                 edge_upstreamNodeIds.append(getFromJunction(lanes[0]))
-                edge_speedLimits.append(16.67)
+                edge_speedLimits.append(0)#16.67
                 edge_linkWidths.append(3.5*len(lanes))
                 edgeLanes = []
                 remotejunctions = []
@@ -138,8 +141,8 @@ def getMAPData():#需要新的地图数据API
                 MapLink['speedLimits'].append(MapSpeedLimit)
                 for point in edge_points[i]:
                     MapPoint=MAP.MapPoint_DF()
-                    lat = (point[1]) * 180.0 / (math.pi * earth_radius) + 37.788204
-                    longi = ((point[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+                    lat = (point[1]) * 180.0 / (math.pi * earth_radius) + 39.5427
+                    longi = ((point[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
                     MapPoint['posOffset']['offsetLL']=('position-LatLon', {'lon':int(10000000*longi), 'lat':int(10000000*lat)})
                     MapLink['points'].append(MapPoint)
                 Lanes=edge_lanes[i]
@@ -167,8 +170,8 @@ def getMAPData():#需要新的地图数据API
                                       
                     for point in getLaneShape(Lanes[j]): 
                         MapPoint=MAP.MapPoint_DF()
-                        lat = (point[1]) * 180.0 / (math.pi * earth_radius) + 37.788204
-                        longi = ((point[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+                        lat = (point[1]) * 180.0 / (math.pi * earth_radius) + 39.5427
+                        longi = ((point[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
                         MapPoint['posOffset']['offsetLL']=('position-LatLon', {'lon':int(10000000*longi), 'lat':int(10000000*lat)})
                         MapLane['points'].append(MapPoint)
 
@@ -210,17 +213,17 @@ def getMAPData():#需要新的地图数据API
                                 MapConnection['phaseId']= 3
                             if connections[k]==next_junction_direction.left:
                                 MapConnection['phaseId']= 4
-                        if i == 1:#0表示自东向西的第二个edge，其直行和右转使用4相位交通灯的第一相位，左转使用第二相位
+                        if i == 1:#1表示自东向西的第二个edge，其直行和右转使用4相位交通灯的第一相位，左转使用第二相位
                             if connections[k]==next_junction_direction.straight or connections[k]==next_junction_direction.right:
                                 MapConnection['phaseId']= 1
                             if connections[k]==next_junction_direction.left:
                                 MapConnection['phaseId']= 2                        
-                        if i == 2:#0表示自南向北的第三个edge，其直行和右转使用4相位交通灯的第三相位，左转使用第四相位
+                        if i == 2:#2表示自南向北的第三个edge，其直行和右转使用4相位交通灯的第三相位，左转使用第四相位
                             if connections[k]==next_junction_direction.straight or connections[k]==next_junction_direction.right:
                                 MapConnection['phaseId']= 3
                             if connections[k]==next_junction_direction.left:
                                 MapConnection['phaseId']= 4                        
-                        if i == 3:#0表示自西向东的第四个edge，其直行和右转使用4相位交通灯的第一相位，左转使用第二相位
+                        if i == 3:#3表示自西向东的第四个edge，其直行和右转使用4相位交通灯的第一相位，左转使用第二相位
                             if connections[k]==next_junction_direction.straight or connections[k]==next_junction_direction.right:
                                 MapConnection['phaseId']= 1
                             if connections[k]==next_junction_direction.left:
@@ -272,19 +275,20 @@ def getMAPData():#需要新的地图数据API
                         MapNode['inLinks'][i]['movements'].append(MapMovement)
                 
                         
-        if len(MAPData['nodes']) >= 10:  
-            for i in range(len(MAPData['nodes'])):   
-                for j in range(len(MAPData['nodes'][i]['inLinks'])): 
-                    MAPData['nodes'][i]['inLinks'][j].pop('movements')
+        # if len(MAPData['nodes']) >= 10:  
+        #     for i in range(len(MAPData['nodes'])):   
+        #         for j in range(len(MAPData['nodes'][i]['inLinks'])): 
+        #             MAPData['nodes'][i]['inLinks'][j].pop('movements')
 
     except Exception as ex:
         print(ex)
         return MAPData
     else:
-
-        with open('C:\\Users\\15751002165\\Desktop\\MAP_message_5.06.txt', 'w') as output_file:
+        path_share = os.path.join(os.path.expanduser('~'),"Desktop")
+        with open(path_share + 'MAP_message_szdx.txt', 'w') as output_file:
             output_file.write(str(MAPData))
-
+            output_file.close()
+            print('1111111111111111111111111111111111111111111111111111111111111')
         return MAPData
 
 

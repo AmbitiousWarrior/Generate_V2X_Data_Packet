@@ -7,7 +7,7 @@ import os
 Agent_V2X_Dir = os.path.dirname(__file__)
 
 
-def getRSIData(rsu_info, traffic_signs_info, *obstacles):
+def getRSIData(rsu_info, traffic_signs_info,pathpoints, *obstacles):
     # 创建RSI消息帧
     RSI_msgCount = 0
     RSIData=MsgFrame.RSI_MsgFrame()
@@ -19,12 +19,15 @@ def getRSIData(rsu_info, traffic_signs_info, *obstacles):
 
         RSIData['msgCnt'] = RSI_msgCount
         # RSIData['id']=rsu_info.id
-        RSIData['id']='1' #rsu暂时无ID属性，暂置为1
+        RSIData['id']='00000001'  #rsu暂时无ID属性，暂置为1
+        # integer_id = int(1)
+        # bytes_id= integer_id.to_bytes(8, 'big')            
+        # RSIData['id']=bytes_id 
         # RSIData['moy']=int(self.scheduler.currentTime/1000)  
         RSIData['moy']=int((datetime.datetime.utcnow().timestamp()%60)) 
         
-        lat = (rsu_info[2]) * 180.0 / (math.pi * earth_radius) + 37.788204
-        longi = ((rsu_info[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+        lat = (rsu_info[2]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+        longi = ((rsu_info[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
         RSIData['refPos']['lat']=int(10000000 * lat)
         RSIData['refPos']['long']=int(10000000 * longi)
         RSIData['refPos']['elevation']=int(rsu_info[3])
@@ -33,22 +36,41 @@ def getRSIData(rsu_info, traffic_signs_info, *obstacles):
         if(len(traffic_signs_info)>0):         
             for info in traffic_signs_info:
                 RSIPoint=RSI.RSIPathPoint_DF()
-                lat = (info[4]) * 180.0 / (math.pi * earth_radius) + 37.788204
-                longi = ((info[3]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
-                RSIPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
+                RSIPoint_2 = RSI.RSIPathPoint_DF()
+                # lat = (info[4]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                # longi = ((info[3]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
+                # RSIPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
+                # RSIPathData['activePath'].append(RSIPoint)
+                # RSIPoint_2['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi + 5400), 'lat':int(10000000 * lat)})
+                # RSIPathData['activePath'].append(RSIPoint_2)
+                # print('pathpoints',pathpoints)
+
+                pos1 =  pathpoints[0]  # [-400.0, -4.8]
+                pos2 =  pathpoints[1]  # [-13.6, -4.8] 
+                lat1 = (pos1[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                longi1 = ((pos1[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat1 * math.pi / 180.0) + (116.2317)
+
+                lat2 = (pos2[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                longi2 = ((pos2[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat2 * math.pi / 180.0) + (116.2317)
+
+                RSIPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi1), 'lat':int(10000000 * lat1)})
                 RSIPathData['activePath'].append(RSIPoint)
+                RSIPoint_2['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi2 + 1*5400), 'lat':int(10000000 * lat2)})
+                RSIPathData['activePath'].append(RSIPoint_2)
 
 
                 RTSData=RSI.RTSData_DF()            
                 # for k in RSIAlertType.keys(): 
                 #     if(self.param['owner3D'].Unity_Resource.lower().find(k.lower())>0):
                 #         RTSData['signType']=RSIAlertType[k]  
-                for (k,v) in RSIAlertType_5.items():
-                    if v==info[2]:     
-                        if k in RSIAlertType:          
-                            RTSData['signType']=RSIAlertType[k]     
-                    else:
-                        RTSData['signType']=0
+                # for (k,v) in RSIAlertType_5.items():
+                #     if v==info[2]:     
+                #         if k in RSIAlertType:          
+                #             # RTSData['signType']=RSIAlertType[k]    
+                #             RTSData['signType']=85  
+                #     else:
+                #         RTSData['signType']=85
+                RTSData['signType']=info[2]
                 RTSData['referencePaths'].append(RSIPathData)
                 
                 #ludayong 20211208 当rtss的referenceLinks为空时，将该字段从主包中删除    
@@ -77,25 +99,40 @@ def getRSIData(rsu_info, traffic_signs_info, *obstacles):
             if configuration["RSU"]["RSI"]["RTE"]!=None:
                 RTEData=RSI.RTEData_DF() 
                 RTEData['eventType']=configuration["RSU"]["RSI"]["RTE"]["eventType"]
-                lat = (rte_object[0]) * 180.0 / (math.pi * earth_radius) + 37.788204
-                longi = ((rte_object[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+                lat = (rte_object[0]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                longi = ((rte_object[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
                 RTEData['eventPos']['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
                 RTEData['eventPos']['offsetV'] = ('elevation', 0)
                 RTEPathData=RSI.ReferencePath_DF()
-                for i in range(5):
+                # for i in range(5):
+                #     RTEPoint=RSI.RSIPathPoint_DF()
+                #     lat = (rte_object[0]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                #     longi = ((rte_object[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
+                #     if i == 0:
+                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi-1*5400), 'lat':int(10000000 * lat)})
+                #     if i == 1:
+                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi+1*5400), 'lat':int(10000000 * lat)})
+                #     if i == 2:
+                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
+                #     if i == 3:
+                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat-1*5400)})
+                #     if i == 4:
+                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat+1*5400)})
+                #     RTEPathData['activePath'].append(RTEPoint)
+                for i in range(2):
                     RTEPoint=RSI.RSIPathPoint_DF()
-                    lat = (rte_object[0]) * 180.0 / (math.pi * earth_radius) + 37.788204
-                    longi = ((rte_object[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+                    pos1 =  pathpoints[0]  # [-400.0, -4.8]
+                    pos2 =  pathpoints[1]  # [-13.6, -4.8] 
+                    lat1 = (pos1[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                    longi1 = ((pos1[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat1 * math.pi / 180.0) + (116.2317)
+
+                    lat2 = (pos2[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                    longi2 = ((pos2[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat2 * math.pi / 180.0) + (116.2317)
                     if i == 0:
-                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi-1*5400), 'lat':int(10000000 * lat)})
+                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi1), 'lat':int(10000000 * lat1)})
                     if i == 1:
-                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi+1*5400), 'lat':int(10000000 * lat)})
-                    if i == 2:
-                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
-                    if i == 3:
-                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat-1*5400)})
-                    if i == 4:
-                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat+1*5400)})
+                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi2), 'lat':int(10000000 * lat2)})
+
                     RTEPathData['activePath'].append(RTEPoint)
                 RTEData['referencePaths'].append(RTEPathData)
                 RTEData.pop('referenceLinks')

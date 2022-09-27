@@ -24,9 +24,9 @@ def getBSMData(veh_information):#需要新的数据源
         print("-----static_configuration.json doesn't exist-----")
     try:
         #EARTH_RADIUS=6371004
-        #ORIGIN_LAT=37.788204
+        #ORIGIN_LAT=39.5427
         #ORIGIN_ELE=0.0
-        #ORIGIN_LON=-122.399498
+        #ORIGIN_LON= 116.2317
         earth_radius = 6371004
         # 通过节点所有者标识符，获取主车数据
         ego=veh_information  #将主车的信息赋予ego
@@ -39,9 +39,9 @@ def getBSMData(veh_information):#需要新的数据源
             BSM_msgCount = BSM_msgCount -127
         BSMData['msgCnt'] = BSM_msgCount
         
-        lat = (ego['Y']) * 180.0 / (math.pi * earth_radius) + 37.788204
+        lat = (ego['Y']) * 180.0 / (math.pi * earth_radius) + 39.5427
         # Longitude is in 1/10 micro degrees in BSM frame - long %
-        longi = ((ego['X']) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+        longi = ((ego['X']) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
         BSMData['pos']['long']=10000000 * longi
         BSMData['pos']['lat']=10000000*lat
         BSMData['pos']['elevation']=0.0

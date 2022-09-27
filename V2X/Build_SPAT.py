@@ -10,7 +10,7 @@ import V2X.trafficlight_phases
 
 SPAT_msgCount = 0
 def getSPATData(ego_time):
-    print('=============',ego_time)
+    # print('=============',ego_time)
     # 创建SPAT消息帧
     SPATData=MsgFrame.SPAT_MsgFrame()
     try:      
@@ -23,7 +23,7 @@ def getSPATData(ego_time):
         SPATData['timeStamp']=int((datetime.datetime.utcnow().timestamp()%60))
 
         now_time = int(ego_time/100) % 1370
-        SPATData['intersections'].append(V2X.trafficlight_phases.creat_intersection_phases(now_time)) 
+        SPATData['intersections'].append(V2X.trafficlight_phases.creat_intersection_phases(now_time+300)) 
         
 
     except Exception as ex:

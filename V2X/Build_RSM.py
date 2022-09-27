@@ -16,13 +16,13 @@ def getRSMData(rsu_info, participants):#interface_cars.append([id,type,shape,x,y
         RSMData['msgCnt'] = RSM_msgCount
         # RSIData['id']=rsu_info.id
         RSMData['id']='00000001' #rsu暂时无ID属性，暂置为1
-        lat = (rsu_info[2]) * 180.0 / (math.pi * earth_radius) + 37.788204
-        longi = ((rsu_info[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+        lat = (rsu_info[2]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+        longi = ((rsu_info[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
         RSMData['refPos']['lat']=int(10000000 * lat)
         RSMData['refPos']['long']=int(10000000 * longi)
         RSMData['refPos']['elevation']=int(rsu_info[3])
         msg_participants=[]
-        participant = {}
+        
         participant_list = []
         # vehs=self.g["VehicleDynamic"].copy()
         for item in participants:
@@ -50,12 +50,13 @@ def getRSMData(rsu_info, participants):#interface_cars.append([id,type,shape,x,y
             p=RSM.RSMParticipantData_DF()
             p['ptcId']=id
             id=id+1
-            p['ptcType']=0
+            p['ptcType']=1
+            # print('v[type]',v['type'])
             if(v['type']==1):
                 p['ptcType']=3
             p['id']='00000' +str(v['id'])
-            v_lat = (v['Y']) * 180.0 / (math.pi * earth_radius) + 37.788204
-            v_longi = ((v['X']) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (-122.399498)
+            v_lat = (v['Y']) * 180.0 / (math.pi * earth_radius) + 39.5427 
+            v_longi = ((v['X']) * 180.0 / (math.pi * earth_radius)) / math.cos(v_lat * math.pi / 180.0) + (116.2317)
             p['pos']['offsetLL']=('position-LatLon', {'lon':int(10000000 * v_longi), 'lat':int(10000000 * v_lat)})
             p['pos']['offsetV']=('elevation', int(v['Z']))
             p['speed']=int(v['Speed']/0.02)
