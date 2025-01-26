@@ -3,7 +3,6 @@ def SPAT_DF():
 
     df['msgCnt']=0
     df['moy']=527040 #optioinal
-    # df['timeStamp']=527040 #optioinal
     df['name']='spat' #optioinal
     df['intersections']=[]
     return df
@@ -14,7 +13,7 @@ def SPATIntersectionState_DF():
 
     df['intersectionId']={}
     #id
-    df['intersectionId']['region']=0 #optioinal
+    df['intersectionId']['region']=1 #optioinal
     df['intersectionId']['id']=0
 
     df['status']=([0,0], 16)

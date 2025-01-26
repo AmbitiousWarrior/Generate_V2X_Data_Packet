@@ -32,7 +32,7 @@
       "light": {
         "lowBeamHeadlightsOn": {
           "Start_time": 0,
-          "End_time": 20,
+          "End_time": 20000,
           "Light_status": 1
         },
         "highBeamHeadlightsOn": {

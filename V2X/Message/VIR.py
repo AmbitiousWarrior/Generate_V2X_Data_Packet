@@ -7,15 +7,15 @@ def VIR_DF():
 
     df['secMark'] = 0
 
-    df['pos'] = {}
+    df['refPos'] = {}
     #pos
-    df['pos']['lat'] = 0
-    df['pos']['long'] = 0
-    df['pos']['elevation'] = 0 #optioinal
+    df['refPos']['lat'] = 0
+    df['refPos']['long'] = 0
+    df['refPos']['elevation'] = 0 #optioinal  -- vehicle real position relates to secMark
     
     df['intAndReq'] = {}# optioinal
-    df['intAndReq']['currentPos'] = [] #当前点
-    df['intAndReq']['path-Planning'] = []  #计划轨迹点集
+    df['intAndReq']['currentPos'] = {} #当前点
+    # df['intAndReq']['path-Planning'] = []  #计划轨迹点集   考虑 8s 规划, 1s 用 10 个点表示，共需 80 个点。预留到 100 个
     df['intAndReq']['currentBehavior'] = [[0,0], 14] 
     df['intAndReq']['reqs'] = []
 
@@ -25,9 +25,9 @@ def reqs():# optioinal
     df = {}
     df['reqID'] = '0' 
     df['status'] = 1
-    df['reqPriority'] = [[0], 8] 
-    df['targetVeh'] = '00000011'
-    df['targetRSU'] = '00001111'
+    df['reqPriority'] = '1'  #Value from B00000000 to B11100000 represents the lowest to the highest level  0b00110000 
+    df['targetVeh'] = '00000002'
+    df['targetRSU'] = '00001001'
     df['info'] = {} #组包时提供所有选项
     df['lifeTime'] = 5555 
     return df
@@ -37,17 +37,17 @@ def pathPlanningPoint():# optioinal
     df['posInMap'] = {}
     df['posInMap'] ['upstreamNodeId']=0
     df['posInMap'] ['downstreamNodeId']=0
-    df['posInMap'] ['referenceLanes']=([0,0], 16)
+    df['posInMap'] ['referenceLanes']=[[0,0], 16]
     
     df['pos'] = {}
     df['pos']['offsetLL']=('position-LatLon', {'lon':0, 'lat':0})
     df['pos']['offsetV'] =('elevation', 0)
     
-    # df['posAccuracy'] = {}  
+    df['posAccuracy'] = {}  
     df['speed'] = 0.0 
-    # df['speedCfd'] = {} 
+    df['speedCfd'] = {} 
     df['heading'] = 0.0 
-    # df['headingCfd'] ={} 
+    df['headingCfd'] ={} 
     
     df['accelSet'] = {}
     df['accelSet']['long']  = 0.0
@@ -55,9 +55,9 @@ def pathPlanningPoint():# optioinal
     df['accelSet']['vert']  = 0.0
     df['accelSet']['yaw']  = 0.0
     
-    # df['acc4WayConfidence'] = {} 
+    df['acc4WayConfidence'] = {} 
     df['estimatedTime'] = 10 #Units of of 10 mSec,
-    # df['timeConfidence'] = {}    
+    df['timeConfidence'] = {}    
     return df
 
 

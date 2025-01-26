@@ -2,8 +2,8 @@ def RSC_DF():
     df = {}
 
     df['msgCnt'] = 0
-    #df['id'] = b'00000000'
-    df['id'] = '00000000'
+    df['id'] = '00000001'
+    df['secMark'] = 0
     df['refPos'] = {}
     #refPos
     df['refPos']['lat'] = 0

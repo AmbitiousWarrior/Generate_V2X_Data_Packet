@@ -12,7 +12,7 @@ def MapNode_DF():
     df['name']='' #optioinal
     df['id']={}
     #id
-    df['id']['region']=0 #optioinal
+    df['id']['region']=1 #optioinal
     df['id']['id']=0
 
     df['refPos']={}
@@ -31,7 +31,7 @@ def MapLink_DF():
     df['name']='' #optioinal
     df['upstreamNodeId']={}
     #upstreamNodeId
-    df['upstreamNodeId']['region']=0 #optioinal
+    df['upstreamNodeId']['region']=1 #optioinal
     df['upstreamNodeId']['id']=0
     df['speedLimits']=[] #optioinal
     df['linkWidth']=350
@@ -64,7 +64,7 @@ def MapMovement_DF():
 
     df['remoteIntersection']={}
     #remoteIntersection
-    df['remoteIntersection']['region']=0 #optioinal
+    df['remoteIntersection']['region']=1 #optioinal
     df['remoteIntersection']['id']=0
 
     df['phaseId']=[]
@@ -94,14 +94,13 @@ def MapConnection_DF():
 
     df['remoteIntersection']={}
     #remoteIntersection
-    df['remoteIntersection']['region']=0 #optioinal
+    df['remoteIntersection']['region']=1 #optioinal
     df['remoteIntersection']['id']=0
 
     df['connectingLane']={}
     #connectingLane
     df['connectingLane']['lane']=0
-    df['connectingLane']['maneuvers']=([255,255], 12) #optioinal
-
+    df['connectingLane']['maneuver']=[[255,0], 12] #optioinal
     df['phaseId']=[]
     return df
 
@@ -122,8 +121,8 @@ def PrepareForCode(map):
                 ba=bytearray(lane['maneuvers'][0])
                 lane['maneuvers']=(bytes(ba), lane['maneuvers'][1])                    
                 for connection in lane['connectsTo']:
-                    ba=bytearray(connection['connectingLane']['maneuvers'][0])
-                    connection['connectingLane']['maneuvers']=(bytes(ba), connection['connectingLane']['maneuvers'][1])
+                    ba=bytearray(connection['connectingLane']['maneuver'][0])
+                    connection['connectingLane']['maneuver']=(bytes(ba), connection['connectingLane']['maneuver'][1])
     return codetobe
 
 if __name__=='__main__':

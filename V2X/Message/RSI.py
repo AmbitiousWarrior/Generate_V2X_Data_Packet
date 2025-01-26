@@ -29,9 +29,6 @@ def RTEData_DF():
     df['eventPos']['offsetV'] = ('elevation', 0)
 
     df['eventRadius']=1000
-    
-    # df['description']={}  #optioinal
-    # df['priority']={}  #optioinal  
 
     df['timeDetails']={} #optioinal
     #timeDetails
@@ -53,10 +50,6 @@ def RTSData_DF():
     #signPos
     df['signPos']['offsetLL']=('position-LatLon', {'lon':0, 'lat':0})
     df['signPos']['offsetV'] = ('elevation', 0)
-    
-    # df['description']={}  #optioinal
-    # df['priority']={}  #optioinal  
-    
     
     df['timeDetails']={} #optioinal
     #timeDetails

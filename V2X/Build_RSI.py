@@ -1,3 +1,4 @@
+from cmath import sqrt
 import math
 from .Message  import *
 import datetime
@@ -6,73 +7,374 @@ import os
 #获取文件父目录
 Agent_V2X_Dir = os.path.dirname(__file__)
 
-
-def getRSIData(rsu_info, traffic_signs_info,pathpoints, *obstacles):
+RSI_msgCount = 0
+def getRSIData(rsu_info, traffic_signs_info_raw,pathpoints, *obstacles):
     # 创建RSI消息帧
-    RSI_msgCount = 0
+    traffic_signs_info = []  
     RSIData=MsgFrame.RSI_MsgFrame()
     try:
         earth_radius = 6371004
+        
+        global RSI_msgCount
         RSI_msgCount += 1
         if RSI_msgCount>=127:
             RSI_msgCount = RSI_msgCount -127
 
         RSIData['msgCnt'] = RSI_msgCount
-        # RSIData['id']=rsu_info.id
         RSIData['id']='00000001'  #rsu暂时无ID属性，暂置为1
-        # integer_id = int(1)
-        # bytes_id= integer_id.to_bytes(8, 'big')            
-        # RSIData['id']=bytes_id 
-        # RSIData['moy']=int(self.scheduler.currentTime/1000)  
         RSIData['moy']=int((datetime.datetime.utcnow().timestamp()%60)) 
         
-        lat = (rsu_info[2]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-        longi = ((rsu_info[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
+        lat = (rsu_info[3]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+        longi = ((rsu_info[2]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
         RSIData['refPos']['lat']=int(10000000 * lat)
         RSIData['refPos']['long']=int(10000000 * longi)
-        RSIData['refPos']['elevation']=int(rsu_info[3])
+        RSIData['refPos']['elevation']=int(rsu_info[4])
 
-        RSIPathData=RSI.ReferencePath_DF()
+        if len(traffic_signs_info_raw) <= 16:
+            traffic_signs_info = traffic_signs_info_raw
+        else:
+            traffic_signs_info = traffic_signs_info_raw[0,16]
+
+        
         if(len(traffic_signs_info)>0):         
             for info in traffic_signs_info:
-                RSIPoint=RSI.RSIPathPoint_DF()
-                RSIPoint_2 = RSI.RSIPathPoint_DF()
-                # lat = (info[4]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-                # longi = ((info[3]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
-                # RSIPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
-                # RSIPathData['activePath'].append(RSIPoint)
-                # RSIPoint_2['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi + 5400), 'lat':int(10000000 * lat)})
-                # RSIPathData['activePath'].append(RSIPoint_2)
-                # print('pathpoints',pathpoints)
+                RSIPathData=RSI.ReferencePath_DF()
+                pathponits_temp1 = []
+                pathponits_temp2 = []
+                if len(pathpoints) == 2:
+                    distance = math.sqrt(math.pow(pathpoints[0][0]-pathpoints[1][0],2) + math.pow(pathpoints[0][1]-pathpoints[1][1],2))
+                    datle_x = pathpoints[1][0]-pathpoints[0][0]
+                    datle_y = pathpoints[1][1]-pathpoints[0][1]
+                    if distance <= 100:
+                        pathponits_temp1.append(pathpoints[0])
+                        for i in range(4):
+                            pathponits_temp1.append([pathpoints[0][0] + datle_x*(i+1)/5,pathpoints[0][1] + datle_y*(i+1)/5])
+                        pathponits_temp1.append(pathpoints[1])
+                    else:
+                        pathponits_num1 = int(distance/20)
+                        pathponits_temp1.append(pathpoints[0])
+                        for i in range(pathponits_num1):
+                            pathponits_temp1.append([pathpoints[0][0] + datle_x*(i+1)/(pathponits_num1+1),pathpoints[0][1] + datle_y*(i+1)/(pathponits_num1+1)])
+                        pathponits_temp1.append(pathpoints[1])
+                else:                  
+                    pathponits_temp1 =  pathpoints
 
-                pos1 =  pathpoints[0]  # [-400.0, -4.8]
-                pos2 =  pathpoints[1]  # [-13.6, -4.8] 
-                lat1 = (pos1[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-                longi1 = ((pos1[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat1 * math.pi / 180.0) + (116.2317)
+                if len(pathponits_temp1) < 32: #保证activePath数量小于32
+                    pathponits_temp2 = pathponits_temp1
+                else:
+                    points_interval= int(len(pathponits_temp1)/10)
+                    for i in range(10): #考虑包的大小，留11个点
+                        pathponits_temp2.append(pathponits_temp1[points_interval*i])
+                    pathponits_temp2.append(pathponits_temp1[-1])
 
-                lat2 = (pos2[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-                longi2 = ((pos2[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat2 * math.pi / 180.0) + (116.2317)
+                pathponits_11 = pathponits_temp2
+                # print('pathponits_',len(pathponits_11),pathponits_11)
 
-                RSIPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi1), 'lat':int(10000000 * lat1)})
-                RSIPathData['activePath'].append(RSIPoint)
-                RSIPoint_2['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi2 + 1*5400), 'lat':int(10000000 * lat2)})
-                RSIPathData['activePath'].append(RSIPoint_2)
+                pathponits_22  = []
+                for i in range(len(pathponits_11)):  #traffic_signs_info[[id,delay_time,shape,x,y,z,yaw,pitch,roll]]
+                    dx = pathponits_11[i][0] - info[3]
+                    dy = pathponits_11[i][1] - info[4]
+                    dis = math.sqrt((dx**2)+(dy**2)) 
+                    if dis < 3000: 
+                        pathponits_22.append(pathponits_11[i])
+                # print('pathponits_2200000',len(pathponits_22))
 
-
-                RTSData=RSI.RTSData_DF()            
-                # for k in RSIAlertType.keys(): 
-                #     if(self.param['owner3D'].Unity_Resource.lower().find(k.lower())>0):
-                #         RTSData['signType']=RSIAlertType[k]  
-                # for (k,v) in RSIAlertType_5.items():
-                #     if v==info[2]:     
-                #         if k in RSIAlertType:          
-                #             # RTSData['signType']=RSIAlertType[k]    
-                #             RTSData['signType']=85  
-                #     else:
-                #         RTSData['signType']=85
-                RTSData['signType']=info[2]
-                RTSData['referencePaths'].append(RSIPathData)
+                for i in range(len(pathponits_22)):
+                    RSIPoint=RSI.RSIPathPoint_DF()
+                    lat1 = (pathponits_22[i][1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                    longi1 = ((pathponits_22[i][0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat1 * math.pi / 180.0) + (116.2317)
+                    RSIPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi1), 'lat':int(10000000 * lat1)})
+                    # print('offsetLL',RSIPoint['offsetLL'])
+                    RSIPathData['activePath'].append(RSIPoint)
                 
+                RTSData=RSI.RTSData_DF()  
+                RTSData['rtsId'] =  info[0]   
+
+                # RTS标志牌代码
+                traffic_signs = {
+                    '114':1,  #交叉路口
+                    '234':2,  #注意急转弯 向左急转
+                    '235':2,  #注意急转弯 向右急转
+                    '220':3,  #反向弯路
+                    '221':3,  #反向弯路
+                    '250':4,  #连续弯路
+                    '253':5,  #注意陡坡 上
+                    '254':5,  #注意陡坡 下
+                    '233':6,  #连续下坡
+                    '251':7,  #窄路 两侧变窄
+                    '256':7,  #窄路 右侧变窄
+                    '257':7,  #窄路 左侧变窄
+                    '267':8,  #注意窄桥 
+                    '259':9,  #双向交通
+                    '260':10,  #注意行人
+                    '261':11,  #注意儿童
+                    '242':12,  #注意驼峰桥
+                    ' ':13,  #注意野生动物***
+                    '255':14,  #注意信号灯
+                    '212':15,  #注意落石
+                    '258':16,  #注意横风
+                    '263':17,  #小心路滑 易滑
+                    '213':18,  #傍山险路
+                    '215':19,  #堤坝路 左
+                    '216':19,  #堤坝路 右
+                    '249':20,  #村庄
+                    '287':21,  #前方隧道
+                    '217':22,  #渡口
+                    '242':23,  #驼峰桥
+                    '248':24,  #路面不平
+                    ' ':25,  #路面高突***
+                    ' ':26,  #路面低洼***
+                    '247':27,  #过水路面
+                    '239':28,  #有人看守铁路道口
+                    '238':29,  #无人看守铁路道口
+                    '240':30,  #叉形符号
+                    ' ':31,  #斜杠符号***
+                    '218':32,  #注意非机动车
+                    '219':33,  #注意残疾人
+                    '237':34,  #事故易发路段
+                    '252':35,  #慢行
+                    '265':36,  #注意障碍物 右
+                    '266':36,  #注意障碍物 左 
+                    '264':37,  #注意危险
+                    '236':38,  #正在施工
+                    '232':39,  #建议速度
+                    ' ':40,  #隧道开车灯***
+                    '214':41,  #注意潮汐车道
+                    '268':42,  #注意保持车距
+                    '241':43,  #注意分离式道路
+                    '35':44,  #注意会车 合流
+                    ' ':45,  #避险车道***
+                    ' ':46,  #注意路面结冰、注意雨(雪)天、注意雾天、注意不利气象条件 ***
+                    ' ':47,  #注意前方车辆排队 ***
+                    '46':48,  #停车让行
+                    '44':49,  #减速让行
+                    '35':50,  #会车让行
+                    '50':51,  #禁止通行
+                    '45':52,  #禁止驶入
+                    '37':53,  #禁止机动车驶入
+                    '34':54,  #禁止载货汽车驶入
+                    '30':55,  #禁止电动三轮车驶入
+                    '31':56,  #禁止大型客车驶入
+                    '51':57,  #禁止小型客车驶入
+                    '47':58,  #禁止挂车、半挂车驶入
+                    '49':59,  #禁止拖拉机驶入
+                    '42':60,  #禁止三轮汽车、低速货车驶入
+                    '41':61,  #禁止摩托车驶入
+                    ' ':62,  #禁止某两种车驶入***
+                    '15':63,  #禁止非机动车进入
+                    '12':64,  #禁止畜力车进入
+                    ' ':65,  #禁止人力客运三轮车进入***
+                    '13':66,  #禁止人力货运三轮车进入
+                    '14':67,  #禁止人力车进入
+                    '52':68,  #禁止行人进入
+                    '58':69,  #禁止向左转弯
+                    '57':70,  #禁止向右转弯
+                    '61':71,  #禁止直行
+                    '17':72,  #禁止向左向右转弯
+                    '65':73,  #禁止直行和向左转弯
+                    '54':74,  #禁止直行和向右转弯
+                    '32':75,  #禁止掉头
+                    '28':76,  #禁止超车
+                    '36':77,  #解除禁止超车
+                    '48':78,  #全路段禁止停车
+                    '29':79,  #禁止长时停车
+                    '40':80,  #禁止鸣笛
+                    '38':81,  #限制宽度
+                    '33':82,  #限制高度
+                    '60':83,  #限制质量
+                    '25':84,  #限制轴重
+                    '53':85,  #限制车速
+                    '55':85,  #限制车速
+                    '54':86,  #解除限制速度
+                    '26':87,  #停车检査
+                    '11':88,  #禁止运输危险物品车辆驶入
+                    '27':89,  #海关
+                    '19':90,  #区域限制速度
+                    '20':91,  #区域限制速度解除
+                    '21':92,  #区域禁止长时停车
+                    '22':93,  #区域禁止长时停车解除
+                    '23':94,  #区域禁止停车
+                    '24':95,  #区域禁止停车解除
+                    '184':96,  #直行
+                    '185':97,  #向左转弯
+                    '186':98,  #向右转弯
+                    '187':99,  #直行和向左转弯
+                    '188':100,  #直行和向右转弯
+                    '189':101,  #向左和向右转弯
+                    '190':102,  #靠右侧道路行驶
+                    '191':103,  #靠左侧道路行驶
+                    '192':104,  #立体交叉直行和左转弯行驶
+                    '193':105,  #立体交叉直行和右转弯行驶
+                    '194':106,  #环岛行驶
+                    '195':107,  #单行路（向左或向右）
+                    '196':108,  #单行路（直行）
+                    '197':109,  #步行
+                    '198':110,  #鸣喇叭
+                    '199':111,  #最低限速
+                    '200':112,  #路口优先通行
+                    '201':113,  #会车先行
+                    '202':114,  #人行横道
+                    '9':115,  #右转车道
+                    '3':116,  #左转车道
+                    '203':117,  #直行车道
+                    '204':118,  #直行和右转合用车道
+                    ' ':119,  #直行和左转合用车道***
+                    '2':120,  #掉头车道
+                    '1':121,  #掉头和左转合用车道
+                    '205':122,  #分向行驶车道
+                    '206':123,  #公交线路专用车道
+                    '207':124,  #机动车行驶
+                    '208':125,  #机动车车道
+                    '209':126,  #非机动车行驶
+                    '210':127,  #非机动车车道
+                    '10':128,  #快速公交系统专用车道
+                    '4':129,  #多乘员车辆专用车道
+                    ' ':130,  #停车位
+                    '211':131,  #允许掉头
+                    ' ':132,  #四车道及以上公路交叉路口预告
+                    ' ':133,  #大交通量的四车道以上公路交叉路口预告
+                    ' ':134,  #箭头杆上标识公路编号、道路名称的公路交叉路口预告
+                    ' ':135,  #十字交叉路口
+                    ' ':136,  #丁字交叉路口
+                    '148':137,  #Y型交叉路口
+                    ' ':138,  #环形交叉路口
+                    '149':139,  #互通式立体交叉
+                    '123':140,  #分岔处
+                    ' ':141,  #国道编号
+                    ' ':142,  #省道编号
+                    ' ':143,  #县道编号
+                    ' ':144,  #乡道编码
+                    ' ':145,  #街道名称
+                    '164':146,  #路名牌
+                    '141':147,  #地点距离
+                    ' ':148,  #地名
+                    ' ':149,  #著名地点
+                    ' ':150,  #行政区划分界
+                    ' ':151,  #道路管理分界
+                    ' ':152,  #地点识别
+                    '5':153,  #停车场
+                    ' ':154,  #错车道
+                    '134':155,  #注意人行天桥
+                    '166':156,  #人行地下通道
+                    '118':157,  #残疾人专用设施
+                    '151':158,  #观景台
+                    '121':159,  #应急避难设施（场所）
+                    ' ':160,  #休息区
+                    ' ':161,  #绕行
+                    '122':162,  #此路不通
+                    '132':163,  #车道数变少
+                    '133':163,  #车道数变少
+                    '140':164,  #车道数增加
+                    '169':165,  #交通监控设备
+                    '127':166,  #隧道出口距离预告
+                    ' ':167,  #基本单元
+                    ' ':168,  #组合使用
+                    ' ':169,  #两侧通行
+                    '144':170,  #右侧通行
+                    '145':171,  #左側通行
+                    '124':172,  #入口预告
+                    '82':173,  #地点、方向
+                    '83':173,  #地点、方向
+                    ' ':174,  #编号
+                    '116':175,  #命名编号
+                    ' ':176,  #路名
+                    '146':177,  #地点距离
+                    ' ':178,  #城市区域多个出口时的地点距离
+                    '74':179,  #下一出口预告
+                    ' ':180,  #岀口编号
+                    '78':181,  #右侧出口预告
+                    ' ':182,  #左侧出口预告
+                    '80':183,  #出口标志及出口地点方向
+                    '70':184,  #髙速公路起点
+                    '71':185,  #终点预告
+                    '72':186,  #终点提示
+                    '73':187,  #国家髙速公路、省级高速公路终点
+                    '103':188,  #道路交通信息
+                    '105':189,  #里程牌
+                    '104':190,  #百米牌
+                    '163':191,  #停车领卡
+                    '102':192,  #车距确认
+                    ' ':193,  #特殊天气建议速度
+                    '91':194,  #紧急电话
+                    '92':195,  #电话位置指示
+                    '93':195,  #电话位置指示
+                    ' ':196,  #救援电话
+                    '89':197,  #不设电子不停车收费(ETC)车道的收费站预告及收费站
+                    '90':197,  #不设电子不停车收费(ETC)车道的收费站预告及收费站
+                    ' ':198,  #设有电子不停车收费(ETC)车道的收费站预告及收费站
+                    '155':199,  #ETC车道指示
+                    ' ':200,  #计重收费
+                    '94':201,  #前方加油站
+                    '95':202,  #紧急停车带
+                    '96':203,  #服务区预告
+                    '97':204,  #停车区预告
+                    '98':205,  #停车场预告
+                    '99':206,  #停车场
+                    '101':207,  #爬坡车道
+                    ' ':208,  #超限超载检测站
+                    ' ':209,  #设置在指路标志版面中的方向
+                    ' ':210,  #设置在指路标志版面外的方向
+                    ' ':211,  #旅游区距离
+                    '321':212,  #旅游区方向
+                    '319':213,  #问讯处
+                    '318':214,  #徒步
+                    '317':215,  #索道
+                    '324':216,  #野营地
+                    '320':217,  #营火
+                    '322':218,  #游戏场
+                    '315':219,  #骑马
+                    '310':220,  #钓鱼
+                    '311':221,  #高尔夫球
+                    '316':222,  #潜水
+                    '323':223,  #游泳
+                    '313':224,  #划船
+                    '309':225,  #冬季游览区
+                    '314':226,  #滑雪
+                    '312':227,  #滑冰
+                    '269':228,  #时间范围
+                    '270':228,  #时间范围
+                    '279':229,  #除公共汽车外
+                    '284':230,  #机动车
+                    '281':231,  #货车
+                    '282':232,  #货车、抱拉机
+                    '289':233,  #私人专属
+                    '271':234,  #行驶方向标志 271--278
+                    '292':235,  #向前200m
+                    '294':236,  #向左100m
+                    '296':237,  #向左、向右各50m
+                    '295':238,  #向右100m
+                    '280':239,  #某区域内
+                    ' ':240,  #距离某地200m
+                    '285':241,  #长度
+                    '293':242,  #前方学校
+                    '283':243,  #海关
+                    '288':244,  #事故
+                    '290':245,  #塌方
+                    '286':246,  #教练车行驶路线
+                    ' ':247,  #驾驶考试路线  ？有icon确没在csv中找到
+                    '291':248,  #校车停集站点
+                    '297':249,  #组合辅助
+
+                    '217':60010  #前方桥梁 @大唐
+                }
+                if str(info[2]) in traffic_signs:
+                    RTSData['signType'] = traffic_signs[str(info[2])] 
+                else:
+                    RTSData['signType'] = 0
+                # print('7777777777777777777777',RTSData['signType'])
+                if len(RSIPathData['activePath'])>1 and len(RSIPathData['activePath'])< 32:
+                    RTSData['referencePaths'].append(RSIPathData)
+                else:
+                    RTSData.pop('referencePaths')
+
+                speed_limit = 30
+                speed_limit2 = [51,48]
+                speed_limit3 = [3,0]
+                # RTSData['description'] = ('textGB2312',speed_limit.to_bytes(2, byteorder="big", signed=False)) 
+                RTSData['description'] = ('textGB2312','30'.encode("gb2312", 'ignore')) 
+                # RTSData['description'] = ('textGB2312',speed_limit3[0].to_bytes(1, byteorder="big", signed=False)+speed_limit3[1].to_bytes(1, byteorder="big", signed=False))   
+
+
                 #ludayong 20211208 当rtss的referenceLinks为空时，将该字段从主包中删除    
                 if len(RTSData['referenceLinks']) == 0:  
                         RTSData.pop('referenceLinks')
@@ -83,113 +385,107 @@ def getRSIData(rsu_info, traffic_signs_info,pathpoints, *obstacles):
         
         # 依然由水马进行rte事件的位置标识
         rte_object = [0.0,0.0,0]
-        for obstacle in obstacles:
-            if(obstacle[0][0] == 4):                    
-                rte_object = [obstacle[0][2],obstacle[0][1],obstacle[0][3]]
+        # print('obstacles',obstacles)
+        if len(obstacles)>0 and len(obstacles[0])>0:
+            for obstacle in obstacles:
+                if(obstacle[0][0] == 4):                    
+                    rte_object = [obstacle[0][2],obstacle[0][1],obstacle[0][3]]
+            
+            try:
+                configurationpath=Agent_V2X_Dir + '\\' + r'static_configuration.json'
+                configurationFile = open(configurationpath,"rb")
+                configuration = json.load(configurationFile)
+            except FileNotFoundError:
+                print("-----static_configuration.json doesn't exist-----")
         
-        try:
-            # configurationpath='.'+ '\\' + r'static_configuration.json'
-            configurationpath=Agent_V2X_Dir + '\\' + r'static_configuration.json'
-            configurationFile = open(configurationpath,"rb")
-            configuration = json.load(configurationFile)
-        except FileNotFoundError:
-            print("-----static_configuration.json doesn't exist-----")
-    
-        if configuration:
-            if configuration["RSU"]["RSI"]["RTE"]!=None:
-                RTEData=RSI.RTEData_DF() 
-                RTEData['eventType']=configuration["RSU"]["RSI"]["RTE"]["eventType"]
-                lat = (rte_object[0]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-                longi = ((rte_object[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
-                RTEData['eventPos']['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
-                RTEData['eventPos']['offsetV'] = ('elevation', 0)
-                RTEPathData=RSI.ReferencePath_DF()
-                # for i in range(5):
-                #     RTEPoint=RSI.RSIPathPoint_DF()
-                #     lat = (rte_object[0]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-                #     longi = ((rte_object[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
-                #     if i == 0:
-                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi-1*5400), 'lat':int(10000000 * lat)})
-                #     if i == 1:
-                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi+1*5400), 'lat':int(10000000 * lat)})
-                #     if i == 2:
-                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
-                #     if i == 3:
-                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat-1*5400)})
-                #     if i == 4:
-                #         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat+1*5400)})
-                #     RTEPathData['activePath'].append(RTEPoint)
-                for i in range(2):
-                    RTEPoint=RSI.RSIPathPoint_DF()
-                    pos1 =  pathpoints[0]  # [-400.0, -4.8]
-                    pos2 =  pathpoints[1]  # [-13.6, -4.8] 
-                    lat1 = (pos1[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-                    longi1 = ((pos1[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat1 * math.pi / 180.0) + (116.2317)
+            if configuration:
+                if configuration["RSU"]["RSI"]["RTE"]!=None:
+                    RTEData=RSI.RTEData_DF() 
+                    RTEData['eventType']= 501
+                    lat = (rte_object[0]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                    longi = ((rte_object[1]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat * math.pi / 180.0) + (116.2317)
+                    RTEData['eventPos']['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi), 'lat':int(10000000 * lat)})
+                    RTEData['eventPos']['offsetV'] = ('elevation', 0)
+                    RTEPathData=RSI.ReferencePath_DF()
 
-                    lat2 = (pos2[1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
-                    longi2 = ((pos2[0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat2 * math.pi / 180.0) + (116.2317)
-                    if i == 0:
+                    pathponits_temp1 = []
+                    pathponits_temp2 = []
+                    if len(pathpoints) == 2:
+                        distance = math.sqrt(math.pow(pathpoints[0][0]-pathpoints[1][0],2) + math.pow(pathpoints[0][1]-pathpoints[1][1],2))
+                        datle_x = pathpoints[1][0]-pathpoints[0][0]
+                        datle_y = pathpoints[1][1]-pathpoints[0][1]
+                        if distance <= 100:
+                            pathponits_temp1.append(pathpoints[0])
+                            for i in range(4):
+                                pathponits_temp1.append([pathpoints[0][0] + datle_x*(i+1)/5,pathpoints[0][1] + datle_y*(i+1)/5])
+                            pathponits_temp1.append(pathpoints[1])
+                        else:
+                            pathponits_num1 = int(distance/20)
+                            pathponits_temp1.append(pathpoints[0])
+                            for i in range(pathponits_num1):
+                                pathponits_temp1.append([pathpoints[0][0] + datle_x*(i+1)/(pathponits_num1+1),pathpoints[0][1] + datle_y*(i+1)/(pathponits_num1+1)])
+                            pathponits_temp1.append(pathpoints[1])
+                    else:
+                        pathponits_temp1 =  pathpoints
+
+                    if len(pathponits_temp1) < 32: #保证activePath数量小于32
+                        pathponits_temp2 = pathponits_temp1
+                    else:
+                        points_interval= int(len(pathponits_temp1)/10)
+                        for i in range(10): #考虑包的大小，留11个点
+                            pathponits_temp2.append(pathponits_temp1[points_interval*i])
+                        pathponits_temp2.append(pathponits_temp1[-1])
+
+                    pathponits_11 = pathponits_temp2
+                    # print('pathponits_',len(pathponits_11),pathponits_11)
+
+
+                    pathponits_22 = []
+                    for i in range(len(pathponits_11)):  #traffic_signs_info[[id,delay_time,shape,x,y,z,yaw,pitch,roll]]
+                        dx = pathponits_11[i][0] - rte_object[1]
+                        dy = pathponits_11[i][1] - rte_object[0]
+                        dis = math.sqrt((dx**2)+(dy**2)) 
+                        # print('00000',dis)
+                        if dis < 3000: 
+                            pathponits_22.append(pathponits_11[i])
+                    # print('pathponits_3311111',len(pathponits_22))
+
+                    for i in range(len(pathponits_22)):
+                        RTEPoint=RSI.RSIPathPoint_DF()
+                        lat1 = (pathponits_22[i][1]) * 180.0 / (math.pi * earth_radius) + 39.5427 
+                        longi1 = ((pathponits_22[i][0]) * 180.0 / (math.pi * earth_radius)) / math.cos(lat1 * math.pi / 180.0) + (116.2317)
                         RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi1), 'lat':int(10000000 * lat1)})
-                    if i == 1:
-                        RTEPoint['offsetLL']=('position-LatLon', {'lon':int(10000000 * longi2), 'lat':int(10000000 * lat2)})
+                        RTEPathData['activePath'].append(RTEPoint)
 
-                    RTEPathData['activePath'].append(RTEPoint)
-                RTEData['referencePaths'].append(RTEPathData)
-                RTEData.pop('referenceLinks')
-                RSIData['rtes'].append(RTEData)
-        
+                    RTEData['referencePaths'].append(RTEPathData)
+                    RTEData.pop('referenceLinks')
+                    RSIData['rtes'].append(RTEData)
+
+        else:
+            RSIData.pop('rtes')
+            # pass
+
         #ludayong 20211117 当rtes为空，将该字段从主包中删除    
-        if len(RSIData['rtes']) == 0:  
-                RSIData.pop('rtes')
+        if 'rtes' in RSIData and len(RSIData['rtes']) == 0:  
+            RSIData.pop('rtes')
+
+        if 'rtss' in RSIData and len(RSIData['rtss']) == 0:  
+            RSIData.pop('rtss')
 
     except Exception as ex:
-        print(ex)
+        # print('RSIData00',RSIData)
+        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!') 
+        print(ex)   
+        print(ex.__traceback__.tb_lineno)   
         return RSIData
-    # self.param['rsiFrame']=RSIData
+
+    if 'rtes' in RSIData and len(RSIData['rtes']) == 0:
+            RSIData.pop('rtes')
     return RSIData
 
 
-RSIAlertType={
-    'Danger':37,'WXCU':37,'Rockfall':15,'Bangsha':15,'Turn':2,'FX':2,'ShiGong':38,'Slippy':17,'WetRoad':17,'Tunnel':21,'congested':1,
-    'Jinzhi_1':201,'Jinzhi_2':202,'Jinzhi_3':203,'Jinzhi_4':204,'Jinzhi_5':205,'Jinzhi_6':206,'Jinzhi_7':207,'Jinzhi_8':208,
-    'Jinzhi_9':209,'Jinzhi_10':210,'Jinzhi_11':211,'Jinzhi_12':212,'Jinzhi_13':213,'Jinzhi_14':214,'Jinzhi_15':215,'Jinzhi_16':216,
-    'Jinzhi_17':217,'Base_DTLift':218,'Base_DT':219,'Base_LeftR':220,'Base_LeftR01':221,'Base_MultiPassenger':222,'Base_Parking001':223,
-    'Base_Parking002':224,'Base_Parking003':225,'Base_Parking004':226,'Base_RightR':227,'Base_Transitlane':228,'Bangsha_1':15,
-    'Bangsha_2':15,'CXC':231,'DB_1':232,'DB_2':233,'dulunm':234,'feijido_1':235,'feijido_2':236,'FX_1':237,'HELIU':238,'Jc_1':239,
-    'Jc_2':240,'Jc_3':241,'Jc_4':242,'Jc_5':243,'Jc_6':244,'Jc_7':245,'Jc_8':246,'jysd':247,'lxxp':248,'SharpTurnLeft':2,
-    'SharpTurnRight':2,'SHIGONG':251,'SHIGUYA':252,'SlipperySurfacejzo':253,'TD_1':254,'TD_2':255,'TD_3':256,'TD_4':257,'TFQ':258,
-    #'Tunnel':259,'WXCU':260,
-    'ZAI_1':261,'ZAI_2':262,'ZQQ_1':263,'ZYCJ':264,'十字':265,'HW_100mSign01':266,'HW_100mSign02':267,'HW_Compose01':268,
-    'HW_Compose02':269,'HW_Compose03':270,'HW_DemarcationLine':271,'HW_Direction01':272,'HW_Direction02':273,'HW_Direction03':274,
-    'HW_Disabled':275,'HW_ElectroniC01':276,'HW_ElectroniC02':277,'HW_Emergency':278,'HW_End':279,'HW_Entrance01':280,
-    'HW_Entrance02':281,'HW_EntranceLD01':282,'HW_EntranceLD02':283,'HW_EntranceNotice01':284,'HW_EntranceNotice02':285,
-    'HW_Exit':286,'HW_ExitLD':287,'HW_ExportNotice':288,'HW_Fewerlanes01':289,'HW_Fewerlanes02':290,'HW_FootBridge':291,
-    'HW_Function01':292,'HW_Function02':293,'HW_Function03':294,'HW_Function04':295,'HW_Function05':296,'HW_Increaselanes':297,
-    'HW_IntersectionA01 ':298,'HW_IntersectionA02 ':299,'HW_LD01':300,'HW_LD02':301,'HW_LinearGuidance01':302,'HW_LinearGuidance02':303,
-    'HW_LinearGuidance03':304,'HW_LinearGuidance04':305,'HW_LocationDirection':306,'HW_LocationDistance':307,'HW_LocationR01':308,
-    'HW_LocationR02':309,'HW_LocationR03':310,'HW_LocationR04':311,'HW_NextExit':312,'HW_ObservationTower':313,'HW_Parking01':314,
-    'HW_Parking02':315,'HW_Parking03':316,'HW_Parking04':317,'HW_ParkingLane':318,'HW_ParkingTollLane01':319,'HW_ParkingTollLane02':320,
-    'HW_ParkingTollLane03':321,'HW_ParkingTollLane04':322,'HW_PassingRound01':323,'HW_PassingRound02':324,'HW_RoadBrand01':325,
-    'HW_RoadName':326,'HW_SpecialWeather':327,'HW_StopTicket':328,'HW_SubDistrict01':329,'HW_SubDistrict02':330,'HW_SubDistrict03':331,
-    'HW_SubWay':332,'HW_Terminal01':333,'HW_Terminal02':334,'HW_TrafficInformation':335,'HW_TrafficMonitoring':336,'HW_Type01':337,
-    'HW_Type02':338,'HW_Type03':339,'HW_VehicleDistance01':340,'HW_VehicleDistance02':341,'HW_VehicleDistance03':342,
-    'HW_VehicleSpeed01':343,'HW_VehicleSpeed02':344,'HW_VehicleSpeed03':345,'HW_VehicleType01':346,'HW_VehicleType02':347,
-    'HW_VehicleType03':348,'HW_VehicleType04':349,'HW_Weight':350
-}
-
-RSIAlertType_5={'Base_DTLift': 1, 'Base_DT': 2, 'Base_LeftR002': 3, 'Base_MultiPassenger': 4, 'Base_Parking001': 5, 'Base_Parking002': 6, 'Base_Parking003': 7, 'Base_Parking004': 8, 'Base_RightR': 9, 'Base_Transitlane': 10, 'Jinzhi_1': 11, 'Jinzhi_2': 12, 'Jinzhi_3': 13, 'Jinzhi_4': 14, 'Jinzhi_5': 15, 'Jinzhi_6': 16, 'Jinzhi_7': 17, 'Jinzhi_8': 18, 'Jinzhi_9': 19, 'Jinzhi_10': 20, 'Jinzhi_11': 21, 'Jinzhi_12': 22, 'Jinzhi_13': 23, 'Jinzhi_14': 24, 'Jinzhi_15': 25, 'Jinzhi_16': 26, 'Jinzhi_17': 27, 'JinzhiCC_28': 28, 'JinzhiCSTF_31': 29, 'JinzhiDDSL_13': 30, 'JinzhiDKC_06': 31, 'JinzhiDT_27': 32, 'JinzhiGD_34': 33, 'JinzhiHC_04': 34, 'JinzhiHC_14': 35, 'JinzhiJC_29': 36, 'JinzhiJDCTX_03': 37, 'JinzhiKD_33': 38, 'JinzhiLZC_12': 39, 'JinzhiMLB_32': 40, 'JinzhiMTC_11': 41, 'JinzhiNYC_10': 42, 'JinzhiRL_16': 43, 'JinzhiRX_15': 44, 'JinzhiSR_02': 45, 'JinzhiTC_17': 46, 'JinzhiTCGC_08': 47, 'JinzhiTF_30': 48, 'JinzhiTLJ_09': 49, 'JinzhiTX_01': 50, 'JinzhiXKC_07': 51, 'JinzhiXRTX_20': 52, 'JinzhiXS_24': 53, 'JinzhiJCXS_36': 54, 'rateLimiting80': 55, 'relief80': 56, 'JinzhiXZYW_22': 57, 'JinzhiXZZW_21': 58, 'JinzhiZHQC_05': 59, 'JinzhiZL_35': 60, 'JinzhiZX_23': 61, 'JinzhiZXCS_19': 62, 'JinzhiZXCX_18': 63, 'JinzhiZXYZ_26': 64, 'JinzhiZXZZ_25': 65, 'FreewayL_1': 66, 'FreewayL_2': 67, 'FreewayL_3': 68, 'FreewayL_4': 69, 'FreewayL_5': 70, 'FreewayL_6': 71, 'FreewayL_7': 72, 'FreewayL_8': 73, 'FreewayL_9': 74, 'FreewayL_10': 75, 'FreewayL_11': 76, 'FreewayL_12': 77, 'FreewayL_13': 78, 'FreewayL_14': 79, 'FreewayL_15': 80, 'FreewayL_16': 81, 'FreewayL_17': 82, 'FreewayL_17_01': 83, 'FreewayL_17_02': 84, 'FreewayL_18_01': 85, 'FreewayL_18_02': 86, 'FreewayL_19': 87, 'FreewayL_20': 88, 'FreewayL_21': 89, 'FreewayL_22': 90, 'FreewayL_23': 91, 'FreewayL_24_01': 92, 'FreewayL_24_02': 93, 'FreewayL_25': 94, 'FreewayL_26': 95, 'FreewayL_27': 96, 'FreewayL_28': 97, 'FreewayL_29': 98, 'FreewayL_30': 99, 'FreewayL_31': 100, 'FreewayL_32': 101, 'FreewayL_33': 102, 'FreewayL_34': 103, 'FreewayL_35': 104, 'FreewayL_36': 105, 'FreewayL_37_01': 106, 'FreewayL_37_02': 107, 'FreewayL_38_01': 108, 'FreewayL_38_02': 109, 'FreewayL_39_01': 110, 'FreewayL_39_02': 111, 'HW_100mSign01': 112, 'HW_100mSign02': 113, 'HW_Compose01': 114, 'HW_Compose02': 115, 'HW_Compose03': 116, 'HW_DemarcationLine': 117, 'HW_Disabled': 118, 'HW_ElectroniC01': 119, 'HW_ElectroniC02': 120, 'HW_Emergency': 121, 'HW_End': 122, 'HW_Entrance01': 123, 'HW_Entrance02': 124, 'HW_EntranceLD01': 125, 'HW_EntranceLD02': 126, 'HW_EntranceNotice01': 127, 'HW_EntranceNotice02': 128, 'HW_Exit': 129, 'HW_ExportNotice': 130, 'HW_FamousPlace': 131, 'HW_Fewerlanes01': 132, 'HW_Fewerlanes02': 133, 'HW_FootBridge': 134, 'HW_Function01': 135, 'HW_Function02': 136, 'HW_Function03': 137, 'HW_Function04': 138, 'HW_Function05': 139, 'HW_Increaselanes': 140, 'HW_LD02': 141, 'HW_LinearGuidance01': 142, 'HW_LinearGuidance02': 143, 'HW_LinearGuidance03': 144, 'HW_LinearGuidance04': 145, 'HW_LocationDistance': 146, 'HW_LocationR01': 147, 'HW_LocationR02': 148, 'HW_LocationR03': 149, 'HW_NextExit': 150, 'HW_ObservationTower': 151, 'HW_Parking02': 152, 'HW_Parking03': 153, 'HW_Parking04': 154, 'HW_ParkingLane': 155, 'HW_ParkingTollLane01': 156, 'HW_ParkingTollLane02': 157, 'HW_ParkingTollLane03': 158, 'HW_ParkingTollLane04': 159, 'HW_RoadBrand01': 160, 'HW_RoadName': 161, 'HW_SpecialWeather': 162, 'HW_StopTicket': 163, 'HW_SubDistrict01': 164, 'HW_SubDistrict02': 165, 'HW_SubWay': 166, 'HW_Terminal01': 167, 'HW_Terminal02': 168, 'HW_TrafficMonitoring': 169, 'HW_Type01': 170, 'HW_Type02': 171, 'HW_Type03': 172, 'HW_VehicleDistance01': 173, 'HW_VehicleDistance02': 174, 'HW_VehicleDistance03': 175, 'HW_VehicleSpeed01': 176, 'HW_VehicleSpeed02': 177, 'HW_VehicleSpeed03': 178, 'HW_VehicleType01': 179, 'HW_VehicleType02': 180, 'HW_VehicleType03': 181, 'HW_VehicleType04': 182, 'HW_Weight': 183, 'ZSBZ_001': 184, 'ZSBZ_002': 185, 'ZSBZ_003': 186, 'ZSBZ_004': 187, 'ZSBZ_005': 188, 'ZSBZ_006': 189, 'ZSBZ_007': 190, 'ZSBZ_008': 191, 'ZSBZ_009': 192, 'ZSBZ_010': 193, 'ZSBZ_011': 194, 'ZSBZ_012': 195, 'ZSBZ_013': 196, 'ZSBZ_014': 197, 'ZSBZ_015': 198, 'ZSBZ_016': 199, 'ZSBZ_017': 200, 'ZSBZ_018': 201, 'ZSBZ_019': 202, 'ZSBZ_021': 203, 'ZSBZ_022': 204, 'ZSBZ_023': 205, 'ZSBZ_024': 206, 'ZSBZ_025': 207, 'ZSBZ_026': 208, 'ZSBZ_027': 209, 'ZSBZ_028': 210, 'ZSBZ_029': 211, 'Bangsha_1': 212, 'Bangsha_2': 213, 'CXC': 214, 'DB_1': 215, 'DB_2': 216, 'dulunm': 217, 'feijido_1': 218, 'feijido_2': 219, 'FX_1': 220, 'FX_2': 221, 'HELIU': 222, 'Jc_1': 223, 'Jc_2': 224, 'Jc_3': 225, 'Jc_4': 226, 'Jc_5': 227, 'Jc_6': 228, 'Jc_7': 229, 'Jc_8': 230, 'Jc_9': 231, 'jysd': 232, 'lxxp_1': 233, 'SharpTurnLeft': 234, 'SharpTurnRight': 235, 'SHIGONG': 236, 'SHIGUYA': 237, 'TD_1': 238, 'TD_2': 239, 'TD_3': 240, 'TD_4': 241, 'TFQ': 242, 'Tunnel': 243, 'Warning_1': 244, 'Warning_2': 245, 'Warning_3': 246, 'Warning_4': 247, 'Warning_5': 248, 'Warning_6': 249, 'Warning_7': 250, 'Warning_8': 251, 'Warning_10': 252, 'Warning_11': 253, 'Warning_12': 254, 'Warning_13': 255, 'Warning_14': 256, 'Warning_15': 257, 'Warning_16': 258, 'Warning_17': 259, 'Warning_18': 260, 'Warning_19': 261, 'Warning_20': 262, 'WetRoad': 263, 'WXCU': 264, 'ZAI_1': 265, 'ZAI_2': 266, 'ZQQ_1': 267, 'ZYCJ': 268, 'fuzhubiaozhiBSSJ_01': 269, 'fuzhubiaozhiBSSJ_02': 270, 'fuzhubiaozhiBSXSFX_01': 271, 'fuzhubiaozhiBSXSFX_02': 272, 'fuzhubiaozhiBSXSFX_03': 273, 'fuzhubiaozhiBSXSFX_04': 274, 'fuzhubiaozhiBSXSFX_05': 275, 'fuzhubiaozhiBSXSFX_06': 276, 'fuzhubiaozhiBSXSFX_07': 277, 'fuzhubiaozhiBSXSFX_08': 278, 'fuzhubiaozhiCGGQCW': 279, 'fuzhubiaozhiEHLQYN': 280, 'fuzhubiaozhiHC': 281, 'fuzhubiaozhiHCTLJ': 282, 'fuzhubiaozhiHG': 283, 'fuzhubiaozhiJDC': 284, 'fuzhubiaozhiJHSDCD5KM': 285, 'fuzhubiaozhiJLCXSLX': 286, 'fuzhubiaozhiJLQFSD200M': 287, 'fuzhubiaozhiSG': 288, 'fuzhubiaozhiSRZS': 289, 'fuzhubiaozhiTF': 290, 'fuzhubiaozhiXCTKD': 291, 'fuzhubiaozhiXQ200M': 292, 'fuzhubiaozhiXX': 293, 'fuzhubiaozhiXZ100M': 294, 'fuzhubiaozhiXY100M': 295, 'fuzhubiaozhiXZXYG50M': 296, 'fuzhubiaozhiZHFZBZ': 297, 'gaoshibiaozhiDXCKY': 298, 'gaoshibiaozhiJAQD': 299, 'gaoshibiaozhiJSSJZSCDH': 300, 'gaoshibiaozhiJWJSXY': 301, 'gaoshibiaozhiJWJSXZ': 302, 'gaoshibiaozhiJWXPJSXY': 303, 'gaoshibiaozhiJWXPJSXZ': 304, 'gaoshibiaozhiLWSS': 305, 'gaoshibiaozhiXCTKZDBZ': 306, 'gaoshibiaozhiYJJHJC': 307, 'gaoshibiaozhiYJLRQW': 308, 'lvyouqubiaozhiDJYLQ': 309, 'lvyouqubiaozhiDY': 310, 'lvyouqubiaozhiGEFQ': 311, 'lvyouqubiaozhiHB': 312, 'lvyouqubiaozhiHC': 313, 'lvyouqubiaozhiHX': 314, 'lvyouqubiaozhiQM': 315, 'lvyouqubiaozhiQS': 316, 'lvyouqubiaozhiSD': 317, 'lvyouqubiaozhiTB': 318, 'lvyouqubiaozhiWXC': 319, 'lvyouqubiaozhiYH': 320, 'lvyouqubiaozhiYQFX': 321, 'lvyouqubiaozhiYXC': 322, 'lvyouqubiaozhiYY': 323, 'lvyouqubiaozhiYYD': 324, 'zuoyequDLFB': 325, 'zuoyequQFSG': 326, 'zuoyequXYGD': 327, 'zuoyequXZGD': 328, 'zuoyequYDFB': 329, 'zuoyequZDFB': 330, 'zuoyequZJFB': 331, 'AVP': 332, 'OneCarOneRod': 333, 'PickupPoint': 334, 'DropOffPoint': 335, 'CrossLayerLogo': 336}
 
 
-def getRSIAlertType(self):
-    if(self.param['congested']):
-        return RSIAlertType['congested']
-    '''
-    湿滑/事故...
-    if()
-    '''
-    for k in RSIAlertType.keys():
-        if(self.param['owner3D'].Unity_Resource.find(k)>0):
-            return RSIAlertType[k]
-    return 0
+
 
 

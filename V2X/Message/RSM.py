@@ -20,7 +20,7 @@ def RSMParticipantData_DF():
     df['ptcId'] = 0
     df['source'] = 0 #unknown
     df['id'] = '00000000' #optioinal
-    # df['plateNo'] = '0000' #optioinal
+    df['plateNo'] = '0000' #optioinal
     df['secMark'] = 0
 
     df['pos'] = {}
@@ -69,7 +69,7 @@ def PrepareForCode(rsm):
     codetobe['id']=str.encode(rsm['id'])
     for participant in codetobe['participants']:       
         participant['id']=str.encode(participant['id'])
-        # participant['plateNo']=str.encode(participant['plateNo'])
+        participant['plateNo']=str.encode(participant['plateNo'])
     return codetobe
 
 if __name__=='__main__':

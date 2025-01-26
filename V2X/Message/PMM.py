@@ -42,7 +42,7 @@ def PMM_DF():
     df['leadingExt']['joiningList'] = []
     df['leadingExt']['leavingList'] = []
     df['leadingExt']['capacity'] = 10
-    df['leadingExt']['openToJoin'] = 1
+    df['leadingExt']['openToJoin'] = True
 
     return df
 

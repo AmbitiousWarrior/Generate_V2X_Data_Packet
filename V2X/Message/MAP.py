@@ -122,8 +122,8 @@ def PrepareForCode(map):
                 ba=bytearray(lane['maneuvers'][0])
                 lane['maneuvers']=(bytes(ba), lane['maneuvers'][1])                    
                 for connection in lane['connectsTo']:
-                    ba=bytearray(connection['connectingLane']['maneuvers'][0])
-                    connection['connectingLane']['maneuvers']=(bytes(ba), connection['connectingLane']['maneuvers'][1])
+                    ba=bytearray(connection['connectingLane']['maneuver'][0])
+                    connection['connectingLane']['maneuver']=(bytes(ba), connection['connectingLane']['maneuver'][1])
     return codetobe
 
 if __name__=='__main__':

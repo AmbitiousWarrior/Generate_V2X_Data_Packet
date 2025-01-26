@@ -7,6 +7,11 @@ if __name__!='__main__':
     from . import RSM
     from . import SSM
     from . import PMM
+    from . import RSC
+    from . import VIR
+    # from . import PAM
+    from . import RTCM 
+    from . import PSM
 
 # 返回BSM数据帧
 def BSM_MsgFrame():
@@ -39,8 +44,20 @@ def SSM_MsgFrame():
 def VIR_MsgFrame():
     return VIR.VIR_DF()
 
+def RSC_MsgFrame():
+    return RSC.RSC_DF()
+
 def PMM_MsgFrame():
     return PMM.PMM_DF()
+
+# def PAM_MsgFrame():
+#     return PAM.PAM_DF()
+
+def RTCM_MsgFrame():
+    return RTCM.RTCM_DF()
+
+def PSM_MsgFrame():
+    return PSM.PSM_DF()
 
 if __name__=='__main__':
     

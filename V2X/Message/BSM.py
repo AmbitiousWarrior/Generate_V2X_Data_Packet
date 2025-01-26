@@ -6,8 +6,8 @@ def BSM_DF():
     df['id'] = '00000000'
     df['plateNo'] = '0000' #optioinal
     df['secMark'] = 0
-    df['timeConfidence'] = 0  #unavailable
     df['pos'] = {}
+
     #pos
     df['pos']['lat'] = 0
     df['pos']['long'] = 0
@@ -17,7 +17,7 @@ def BSM_DF():
     #accuracy
     df['posAccuracy']['semiMajor'] = 255 # 'unavailable'
     df['posAccuracy']['semiMinor'] = 255 #'unavailable' optioinal 
-    df['posAccuracy']['orientation'] = 65535 #'unavailable' optioinal
+    df['posAccuracy']['orientation'] = 65535 #'unavailable' optioinal 
 
     df['posConfidence'] = {}
     #accuracy

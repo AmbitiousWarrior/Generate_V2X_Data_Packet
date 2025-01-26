@@ -16,8 +16,6 @@ def getBSMData(veh_information):#需要新的数据源
     BSMData=MsgFrame.BSM_MsgFrame()
     try:
         configurationpath=Agent_V2X_Dir + '\\' + r'static_configuration.json'
-        # print('===============',configurationpath)
-        # configurationpath='.' + '\\' + r'static_configuration.json'
         configurationFile = open(configurationpath,"rb")
         configuration = json.load(configurationFile)
     except FileNotFoundError:
@@ -26,7 +24,7 @@ def getBSMData(veh_information):#需要新的数据源
         #EARTH_RADIUS=6371004
         #ORIGIN_LAT=39.5427
         #ORIGIN_ELE=0.0
-        #ORIGIN_LON= 116.2317
+        #ORIGIN_LON=116.2317
         earth_radius = 6371004
         # 通过节点所有者标识符，获取主车数据
         ego=veh_information  #将主车的信息赋予ego
@@ -48,91 +46,123 @@ def getBSMData(veh_information):#需要新的数据源
         BSMData['secMark']=int((datetime.datetime.utcnow().timestamp()%60)*1000)
         BSMData['speed']=round(ego['Speed']/0.02)
         
-        bsm_yaw =round(ego['Yaw'],4)-math.pi/2
-        if bsm_yaw<0:
-            bsm_yaw = 2*math.pi-math.fabs(bsm_yaw)
-        bsm_yaw2 = math.fabs(bsm_yaw-2*math.pi)    
-        BSMData['heading']=round((bsm_yaw2*180/3.14)/0.0125)
-        if BSMData['heading'] > 359.9875:
-            BSMData['heading'] -=359.9875 
+        bsm_yaw =ego['Yaw'] 
+        if bsm_yaw < 0:
+            bsm_yaw += 360
+        if bsm_yaw> 359.9875:
+            bsm_yaw =359.9875 
+        BSMData['heading']=round(bsm_yaw/0.0125)
 
         BSMData['accelSet']['long']= 0.0
         BSMData['accelSet']['lat']= 0.0
         BSMData['accelSet']['vert']=0.0
         BSMData['accelSet']['yaw']=0.0
-        BSMData['size']['width']=180 * 100 # in unit of 1 cm
-        BSMData['size']['length']=500 * 100 # in unit of 1 cm
-        BSMData['size']['height']=1.52 * (100/5)
-        BSMData['vehicleClass']['classification']=10
+        BSMData['size']['width']=1.8 * 100 # in unit of 1 cm
+        BSMData['size']['length']=5.0 *100 # in unit of 1 cm
+        BSMData['size']['height']=1.52 * (100/5) # in unit of 5 cm
+        BSMData['vehicleClass']['classification']=61
 
 
         light_status_list = []
         if configuration:
-            for k,v in configuration['HV_1']['Body']['light'].items():
-                if v['Start_time'] < ego['Time']  and ego['Time']  < v['End_time']:
-                    light_status_list.append(v['Light_status'])
-                else:
-                    light_status_list.append(0)
+            if ego['counter'] != 1:
+                for k,v in configuration['HV_1']['Body']['light'].items():
+                    if v['Start_time'] < ego['Time']  and ego['Time']  < v['End_time']:
+                        light_status_list.append(v['Light_status'])
+                    else:
+                        light_status_list.append(0)
 
-            lights=[0,0]
-            lights[0]=128*light_status_list[0]+64*light_status_list[1]+32*light_status_list[2]+16*light_status_list[3]+8*light_status_list[4]+4*light_status_list[5]+2*light_status_list[6]+light_status_list[7]
-            lights[1]=128*light_status_list[8]
-            BSMData['safetyExt']['lights'][0]=lights
+                lights=[0,0]
+                lights[0]=128*light_status_list[0]+64*light_status_list[1]+32*light_status_list[2]+16*light_status_list[3]+8*light_status_list[4]+4*light_status_list[5]+2*light_status_list[6]+light_status_list[7]
+                lights[1]=128*light_status_list[8]
+                BSMData['safetyExt']['lights'][0]=lights
 
-            temp_json1 = configuration['HV_2']['Body']['Out-of-control_vehicle_condition']
-            if temp_json1['brakePadel']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['brakePadel']['End_time']:
-                BSMData['brakes']['brakePadel']=temp_json1['brakePadel']['brakePadel_status']
+                temp_json1 = configuration['HV_1']['Body']['Out-of-control_vehicle_condition']
+                if temp_json1['brakePadel']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['brakePadel']['End_time']:
+                    BSMData['brakes']['brakePadel']=temp_json1['brakePadel']['brakePadel_status']
 
-            if temp_json1['wheelBrakes']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['wheelBrakes']['End_time']:
-                temp_wB=temp_json1['wheelBrakes']['wheelBrakes_status']
-                wheelBrakes=[0]
-                if temp_wB['unavailable'] != 0:
-                    wheelBrakes[0] = 0
-                    BSMData['brakes']['wheelBrakes'][0] = wheelBrakes
-                else:
-                    wheelBrakes[0] = (temp_wB['unavailable']*16+temp_wB['leftFront']*8+temp_wB['leftRear']*4+temp_wB['rightFront']*2+temp_wB['rightRear'])*8
-                    BSMData['brakes']['wheelBrakes'][0] = wheelBrakes
+                if temp_json1['wheelBrakes']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['wheelBrakes']['End_time']:
+                    temp_wB=temp_json1['wheelBrakes']['wheelBrakes_status']
+                    wheelBrakes=[0]
+                    if temp_wB['unavailable'] != 0:
+                        wheelBrakes[0] = 0
+                        BSMData['brakes']['wheelBrakes'][0] = wheelBrakes
+                    else:
+                        wheelBrakes[0] = (temp_wB['unavailable']*16+temp_wB['leftFront']*8+temp_wB['leftRear']*4+temp_wB['rightFront']*2+temp_wB['rightRear'])*8
+                        BSMData['brakes']['wheelBrakes'][0] = wheelBrakes
 
-            if temp_json1['traction']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['traction']['End_time']:
-                BSMData['brakes']['traction']=temp_json1['traction']['traction_status']
+                if temp_json1['traction']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['traction']['End_time']:
+                    BSMData['brakes']['traction']=temp_json1['traction']['traction_status']
 
-            if temp_json1['abs']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['abs']['End_time']:
-                BSMData['brakes']['abs']=temp_json1['abs']['abs_status']
+                if temp_json1['abs']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['abs']['End_time']:
+                    BSMData['brakes']['abs']=temp_json1['abs']['abs_status']
 
-            if temp_json1['scs']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['scs']['End_time']:
-                BSMData['brakes']['scs']=temp_json1['scs']['scs_status']
+                if temp_json1['scs']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['scs']['End_time']:
+                    BSMData['brakes']['scs']=temp_json1['scs']['scs_status']
 
-            if temp_json1['brakeBoost']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['brakeBoost']['End_time']:
-                BSMData['brakes']['brakeBoost']=temp_json1['brakeBoost']['brakeBoost_status']
+                if temp_json1['brakeBoost']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['brakeBoost']['End_time']:
+                    BSMData['brakes']['brakeBoost']=temp_json1['brakeBoost']['brakeBoost_status']
 
-            if temp_json1['auxBrakes']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['auxBrakes']['End_time']:
-                BSMData['brakes']['auxBrakes']=temp_json1['auxBrakes']['auxBrakes_status']
-            events=[0,0]
-            if temp_json1['abs']['abs_status'] == 3 or temp_json1['abs']['abs_status'] == 2:
-                abs_status = 1
+                if temp_json1['auxBrakes']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['auxBrakes']['End_time']:
+                    BSMData['brakes']['auxBrakes']=temp_json1['auxBrakes']['auxBrakes_status']
+                events=[0,0]
+                eve = [0,0,0,0,0,0,0,0,0,0,0,0,0] #event在此修改
+                events[0]= 128*eve[0]+64*eve[1]+32*eve[2]+16*eve[3]+8*eve[4]+4*eve[5]+2*eve[6]+1*eve[7]
+                events[1]= (16*eve[8]+8*eve[9]+4*eve[10]+2*eve[11]+1*eve[12])*8
+                BSMData['safetyExt']['events'][0] = events
+
             else:
-                abs_status = 0
-            if temp_json1['traction']['traction_status'] == 3 or temp_json1['traction']['traction_status'] == 2:
-                traction_status = 1
-            else:
-                traction_status = 0
-            if temp_json1['scs']['scs_status'] == 3 or temp_json1['scs']['scs_status'] == 2:
-                scs_status = 1
-            else:
-                scs_status = 0
-            if temp_json1['brakeBoost']['brakeBoost_status'] == 3 or temp_json1['brakeBoost']['brakeBoost_status'] == 2:
-                brakeBoost_status = 1
-            else:
-                brakeBoost_status = 0
-            events[0]=128*light_status_list[4]+64*0+32*abs_status+16*traction_status+8*scs_status+4*0+2*0+1*brakeBoost_status
-            events[1]=0
-            BSMData['safetyExt']['events'][0] = events
-         
+                for k,v in configuration['HV_2']['Body']['light'].items():
+                    if v['Start_time'] < ego['Time']  and ego['Time']  < v['End_time']:
+                        light_status_list.append(v['Light_status'])
+                    else:
+                        light_status_list.append(0)
+
+                lights=[0,0]
+                lights[0]=128*light_status_list[0]+64*light_status_list[1]+32*light_status_list[2]+16*light_status_list[3]+8*light_status_list[4]+4*light_status_list[5]+2*light_status_list[6]+light_status_list[7]
+                lights[1]=128*light_status_list[8]
+                BSMData['safetyExt']['lights'][0]=lights
+
+                temp_json1 = configuration['HV_2']['Body']['Out-of-control_vehicle_condition']
+                if temp_json1['brakePadel']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['brakePadel']['End_time']:
+                    BSMData['brakes']['brakePadel']=temp_json1['brakePadel']['brakePadel_status']
+
+                if temp_json1['wheelBrakes']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['wheelBrakes']['End_time']:
+                    temp_wB=temp_json1['wheelBrakes']['wheelBrakes_status']
+                    wheelBrakes=[0]
+                    if temp_wB['unavailable'] != 0:
+                        wheelBrakes[0] = 0
+                        BSMData['brakes']['wheelBrakes'][0] = wheelBrakes
+                    else:
+                        wheelBrakes[0] = (temp_wB['unavailable']*16+temp_wB['leftFront']*8+temp_wB['leftRear']*4+temp_wB['rightFront']*2+temp_wB['rightRear'])*8
+                        BSMData['brakes']['wheelBrakes'][0] = wheelBrakes
+
+                if temp_json1['traction']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['traction']['End_time']:
+                    BSMData['brakes']['traction']=temp_json1['traction']['traction_status']
+
+                if temp_json1['abs']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['abs']['End_time']:
+                    BSMData['brakes']['abs']=temp_json1['abs']['abs_status']
+
+                if temp_json1['scs']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['scs']['End_time']:
+                    BSMData['brakes']['scs']=temp_json1['scs']['scs_status']
+
+                if temp_json1['brakeBoost']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['brakeBoost']['End_time']:
+                    BSMData['brakes']['brakeBoost']=temp_json1['brakeBoost']['brakeBoost_status']
+
+                if temp_json1['auxBrakes']['Start_time'] < ego['Time']  and ego['Time']  < temp_json1['auxBrakes']['End_time']:
+                    BSMData['brakes']['auxBrakes']=temp_json1['auxBrakes']['auxBrakes_status']
+
+                events=[0,0]
+                eve = [0,0,0,0,0,0,0,0,0,0,0,0,0]
+                events[0]=128*eve[0]+64*eve[1]+32*eve[2]+16*eve[3]+8*eve[4]+4*eve[5]+2*eve[6]+1*eve[7]
+                events[1]=(16*eve[8]+8*eve[9]+4*eve[10]+2*eve[11]+1*eve[12])*8
+                BSMData['safetyExt']['events'][0] = events
+        else:
+            BSMData.pop('safetyExt')
+            BSMData.pop('brakes')
+        
     except Exception as ex:
         print(ex)
         return BSMData
     else:
-        # BSMData_json = json.dumps(BSMData)
-        # with open('C:\\Users\\15751002165\\Desktop\\BSM_message.txt','w') as FD:
-        #     FD.write(BSMData_json)
         return BSMData

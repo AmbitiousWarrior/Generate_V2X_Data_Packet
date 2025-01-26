@@ -47,7 +47,7 @@ IMPORTS MsgCount FROM MsgFrame
 	}
 	
 	PathPlanning ::= SEQUENCE (SIZE(1..100)) OF PathPlanningPoint
-	-- ¿¼ÂÇ8s¹æ»®£¬1sÓÃ10¸öµã±íÊ¾£¬¹²Ðè80¸öµã¡£Ô¤Áôµ½100¸ö
+	-- ï¿½ï¿½ï¿½ï¿½8sï¿½æ»®ï¿½ï¿½1sï¿½ï¿½10ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½80ï¿½ï¿½ï¿½ã¡£Ô¤ï¿½ï¿½ï¿½ï¿½100ï¿½ï¿½
 	
 	PathPlanningPoint ::= SEQUENCE {
 		posInMap ReferenceLink OPTIONAL,
